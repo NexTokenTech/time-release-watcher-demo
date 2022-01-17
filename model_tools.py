@@ -1,6 +1,7 @@
 from dbmodel import Transaction, Block
 
 
+# generate transaction source data with block_id
 def generate_transaction_block(block_id: str, transaction: dict, release_msg: str):
     if block_id == "":
         return Transaction(
@@ -29,6 +30,7 @@ def generate_transaction_block(block_id: str, transaction: dict, release_msg: st
         )
 
 
+# generate block with block dictionary and tx_count
 def generate_block(block: dict, tx_count: int):
     return Block(block_id=block["id"],
                  height=block["height"],

@@ -47,4 +47,10 @@ source ./venv/bin/activate
 (venv) $ deactivate
 ```
 
+# Crpyto import error notice:
+If you have installed pycryptodome as requirements.txt file show.
+Then you also have an error like 'No Module Found 'Crypto'',
+You should find your external lib,and find crypto.
+Refactor 'crypto' to 'Crypto',that will be ok.
+
 
