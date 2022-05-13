@@ -2,6 +2,8 @@ import logo from './logo.svg';
 import './App.css';
 import React, { useEffect, useState } from 'react';
 import axios from 'axios'
+import moment from 'moment'
+import sha256 from 'crypto-js/sha256';
 import BlockListCell from './compnents/BlockListCell.js'
 import { routes } from "./routes";
 import TransactionList from "./compnents/TransactionList"
@@ -15,6 +17,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import {Button} from "@mui/material";
+import Base64  from 'base-64';
 
 // import { Link, HashRouter as Router, LinkProps } from "react-router-dom";
 // import {BrowserRouter as Router,
@@ -34,6 +37,7 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import CloseIcon from '@mui/icons-material/Close';
 import Slide from '@mui/material/Slide';
+import SHA256 from "crypto-js/sha256";
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
@@ -44,9 +48,10 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
     backgroundColor: theme.palette.common.black,
     color: theme.palette.common.white,
+    fontSize: 20,
   },
   [`&.${tableCellClasses.body}`]: {
-    fontSize: 14,
+    fontSize: 20,
   },
 }));
 
@@ -69,6 +74,8 @@ function App() {
 
   let currentBlockHeight = -1
   let currentTransactionHeight = -1
+  let genesisBlockTimeStamp = 1642287891509;
+  let hosturl = "http://34.238.156.1:8093";
 
   useEffect(()=>{
     fetchTransactions()
@@ -85,13 +92,20 @@ function App() {
 
 
   function fetchTransactions() {
-    axios.get('/api/transactions').then(response => {
+    axios.get(hosturl + '/transactions').then(response => {
       console.log("SUCCESS", response)
       const message = response.data.message
       console.log(message)
       let tmpList = []
       for (let i=0;i<message.length;i++){
-        const txItem = message[i]
+        let txItem = message[i]
+        const release_time  =  block_height_to_datetime(txItem.release_block_idx);
+        const relation_time  =  block_height_to_datetime(txItem.relation_block_height);
+        txItem.release_time = release_time;
+        txItem.relation_time = relation_time;
+        const hashDigest = sha256(txItem.decrypted_msg).toString();
+        txItem.cipher_hash = hashDigest;
+        console.log("~!!!!!!!!!!!!!!~~~~~~~~~~~~~~~~~~",txItem);
         if(txItem.decrypted_msg){
           tmpList.push(txItem)
         }
@@ -103,10 +117,16 @@ function App() {
     })
   }
 
+  function block_height_to_datetime(block_height){
+    let timestamp = genesisBlockTimeStamp + 30000*block_height;
+    const release_time  =  moment(timestamp).format('yy.MM.DD HH:mm')
+    return release_time;
+  }
+
 
   async function fetchLastTransactions(){
     if(currentBlockHeight !== -1){
-      const response = await axios.get('/api/lastTransactions/' + currentBlockHeight);
+      const response = await axios.get(hosturl + '/lastTransactions/' + currentBlockHeight);
       if(response.data.resultStatus === 'SUCCESS'){
         console.log("lastTransactions SUCCESS");
         for(let i=0;i<response.data.message.length;i++){
@@ -121,12 +141,13 @@ function App() {
   }
 
   async function fetchLastBlock() {
-    const response = await axios.get('/api/lastBlock');
+    const response = await axios.get(hosturl + '/lastBlock');
     if(response.data.resultStatus === 'SUCCESS'){
       console.log("lastBlock SUCCESS");
       const block = response.data.message
       if (block.height !== undefined) {
         console.log("~~~~~~~~~~~~~~~~~~~~~~~~", block.height)
+        console.log("~~~~~~~~~~~~~~~~~~~~~~~~~",Date.now());
         console.log("~~~~~~~~~~~~~~~~~~~~~~~~", currentTransactionHeight)
         if(block.height !== currentTransactionHeight){
           setCurrentBlockHeightByHeight(block.height)
@@ -156,11 +177,12 @@ function App() {
             <Table sx={{ minWidth: 700 }} aria-label="customized table">
               <TableHead>
                 <TableRow>
-                  <StyledTableCell>tx_id</StyledTableCell>
-                  <StyledTableCell>chiper</StyledTableCell>
-                  <StyledTableCell align="left">decrypted_msg</StyledTableCell>
-                  <StyledTableCell align="left">time_release_block_height</StyledTableCell>
-                  <StyledTableCell align="left">block_height</StyledTableCell>
+                  <StyledTableCell>transaction id</StyledTableCell>
+                  <StyledTableCell>publisher</StyledTableCell>
+                  <StyledTableCell align="left">publish time</StyledTableCell>
+                  <StyledTableCell>cipher</StyledTableCell>
+                  <StyledTableCell align="left">release time</StyledTableCell>
+                  <StyledTableCell align="left">released message</StyledTableCell>
                 </TableRow>
               </TableHead>
               {
@@ -168,13 +190,14 @@ function App() {
                     ? <TableBody>
                 {getTransactionList.map((item) => (
                     <StyledTableRow key={item.tx_id}>
-					  <StyledTableCell component="th" scope="row">
+					  <StyledTableCell align="left">
 					    {item.tx_id}
 					  </StyledTableCell>
-                      <StyledTableCell align="left">{item.chiper}</StyledTableCell>
+                      <StyledTableCell align="left">{item.from_address != undefined ? item.from_address.substring(0,30) + "..." : ""}</StyledTableCell>
+                      <StyledTableCell align="left">{item.relation_time}</StyledTableCell>
+                      <StyledTableCell align="left">{item.cipher_hash != undefined ? item.cipher_hash.substring(0,40) + "..." : ""}</StyledTableCell>
+                      <StyledTableCell align="left">{item.release_time}</StyledTableCell>
 					  <StyledTableCell align="left">{item.decrypted_msg}</StyledTableCell>
-					  <StyledTableCell align="left">{item.release_block_idx}</StyledTableCell>
-					  <StyledTableCell align="left">{item.relation_block_height}</StyledTableCell>
 					</StyledTableRow>
               ))}
               </TableBody>
