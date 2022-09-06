@@ -1,5 +1,5 @@
-# TimeReleaseClient
-## TimeReleaseClient is NexToken's Centralized Client System
+# Block Index Engine Demo
+This is a block index engine (Demo) with postgreSQL to release and index decentrlaized timed-release encryption data.
 
 ## Flask Backend
 
